@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { ReactNode, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './component/Header';
 import Sidebar from './component/Sidebar';
 import Footer from './component/Footer';
@@ -9,9 +10,16 @@ import Requests from './pages/Requests';
 import MarketProducts from './pages/MarketProducts';
 import MerchantServices from './pages/MerchantServices';
 import DeliveryAddresses from './pages/DeliveryAddresses';
+import SignUp from './pages/SignUp';
+import Login from './pages/Login'; // Import the new Login component
 
-function App() {
-  const [activePage, setActivePage] = useState('dashboard');
+// Layout component that wraps the dashboard pages
+interface DashboardLayoutProps {
+  children?: ReactNode;
+}
+
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  const [activePage, setActivePage] = useState<string>('dashboard');
 
   const renderPage = () => {
     switch (activePage) {
@@ -46,6 +54,45 @@ function App() {
       </div>
     </div>
   );
+};
+
+// Protected Route component to ensure only authenticated users can access dashboard
+interface ProtectedRouteProps {
+  children: ReactNode;
 }
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  // Get authentication status from localStorage or your auth state
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  
+  // If not authenticated, redirect to login page (changed from signup to login)
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        {/* Auth routes - publicly accessible */}
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login />} /> {/* Add login route */}
+        
+        {/* Dashboard routes - protected by authentication */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        } />
+        
+        {/* Redirect any unknown routes to login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Router>
+  );
+};
 
 export default App;
