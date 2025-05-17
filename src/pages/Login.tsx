@@ -1,8 +1,8 @@
-import React, { useState, useEffect, ChangeEvent, FocusEvent, FormEvent } from 'react';
+import React, { useState, useEffect, useCallback, ChangeEvent, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 // Define interfaces for our form data and errors
-interface LoginFormData {
+interface FormData {
   email: string;
   password: string;
   rememberMe: boolean;
@@ -17,11 +17,18 @@ interface TouchedFields {
   [key: string]: boolean;
 }
 
+// Dynamically set the API URL based on the environment
+const isDevelopment = window.location.hostname === 'localhost';
+const API_BASE_URL = isDevelopment 
+  ? 'http://localhost:5001' 
+  : 'http://157.245.108.130:5173';
+const API_LOGIN_URL = `${API_BASE_URL}/api/auth/login`;
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
   
   // Form state
-  const [formData, setFormData] = useState<LoginFormData>({
+  const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
     rememberMe: false
@@ -32,49 +39,21 @@ const Login: React.FC = () => {
   const [touched, setTouched] = useState<TouchedFields>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string>('');
+  const [apiError, setApiError] = useState<string>('');
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Check if user is already authenticated - if yes, redirect to dashboard
   useEffect(() => {
-    if (localStorage.getItem('isAuthenticated') === 'true') {
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    if (isAuthenticated) {
       navigate('/dashboard');
     }
   }, [navigate]);
 
-  // Validate form when values change and form has been touched
-  useEffect(() => {
-    if (Object.keys(touched).length > 0) {
-      validateForm();
-    }
-  }, [formData, touched]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
-    
-    // Clear general login error when user makes changes
-    if (loginError) {
-      setLoginError(null);
-    }
-  };
-
-  const handleBlur = (e: FocusEvent<HTMLInputElement>): void => {
-    const { name } = e.target;
-    setTouched({
-      ...touched,
-      [name]: true
-    });
-  };
-
-  const togglePasswordVisibility = (): void => {
-    setShowPassword(!showPassword);
-  };
-
-  const validateForm = (): boolean => {
-    let newErrors: FormErrors = {};
+  // Create a memoized validation function to prevent unnecessary re-renders
+  const validateForm = useCallback(() => {
+    const newErrors: FormErrors = {};
     
     // Email validation
     if (touched.email && !formData.email) {
@@ -90,85 +69,177 @@ const Login: React.FC = () => {
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  }, [formData.email, formData.password, touched]);
+
+  // Validate form when specific dependencies change
+  useEffect(() => {
+    // Only validate if at least one field has been touched
+    if (Object.keys(touched).length > 0) {
+      validateForm();
+    }
+  }, [validateForm]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Clear any login error when the user types
+    if (loginError) {
+      setLoginError('');
+    }
+    if (apiError) {
+      setApiError('');
+    }
+    if (debugInfo) {
+      setDebugInfo('');
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
+    const { name } = e.target;
+    setTouched(prevTouched => ({
+      ...prevTouched,
+      [name]: true
+    }));
+  };
+
+  const togglePasswordVisibility = (): void => {
+    setShowPassword(prevState => !prevState);
+  };
+
+  // Function to test API connection
+  const testApiConnection = async (): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/test`);
+      const data = await response.json();
+      setDebugInfo(`API connection test: ${data.message}`);
+    } catch (error) {
+      setDebugInfo(`API connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const loginWithCredentials = async (email: string, password: string): Promise<void> => {
+    setIsSubmitting(true);
+    setLoginError('');
+    setApiError('');
+    setDebugInfo('');
+    
+    try {
+      console.log(`Attempting to login with: ${email}`);
+      console.log(`API URL: ${API_LOGIN_URL}`);
+      
+      // Create the request payload
+      const payload = { email, password };
+      console.log('Request payload:', payload);
+      
+      // Set up fetch options with proper headers
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload),
+      };
+      
+      // Log the request details
+      console.log('Request options:', {
+        method: requestOptions.method,
+        headers: requestOptions.headers,
+        bodyLength: requestOptions.body.length
+      });
+      
+      // Make the request
+      const response = await fetch(API_LOGIN_URL, requestOptions);
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      // Get response body as text first
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      // Then parse as JSON if possible
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log('Parsed response:', data);
+      } catch (e) {
+        console.error('Failed to parse response as JSON:', e);
+        data = { success: false, message: 'Invalid response format from server' };
+      }
+      
+      if (!response.ok) {
+        // Handle error response
+        throw new Error(data.message || `Login failed with status: ${response.status}`);
+      }
+      
+      if (!data.success) {
+        // API returned success:false
+        throw new Error(data.message || 'Login failed');
+      }
+      
+      console.log('Login successful:', data);
+      
+      // Save auth data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.user));
+      localStorage.setItem('isAuthenticated', 'true');
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          const serverUrl = isDevelopment ? 'localhost:5001' : '157.245.108.130:5173';
+          setApiError(`Cannot connect to the server. Please make sure the backend server is running on ${serverUrl}.`);
+        } else if (error.message.includes('401') || error.message.includes('Invalid email or password')) {
+          setLoginError('Invalid email or password. Please try again.');
+        } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          setLoginError('Access forbidden. You may not have permission to access this resource.');
+          setDebugInfo('403 Forbidden: The server understood the request but refuses to authorize it. Try using different credentials or check if CORS is properly configured.');
+        } else {
+          setLoginError(error.message || 'Login failed. Please try again.');
+        }
+      } else {
+        setLoginError('An unknown error occurred. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     
-    // Mark all fields as touched to show validation errors
-    const allTouched: TouchedFields = Object.keys(formData).reduce((acc, key) => {
-      acc[key] = true;
-      return acc;
-    }, {} as TouchedFields);
+    // Mark fields as touched to show validation errors
+    setTouched({
+      email: true,
+      password: true
+    });
     
-    setTouched(allTouched);
-    
+    // Manually validate before submission
     const isValid = validateForm();
     
     if (isValid) {
-      setIsSubmitting(true);
-      
-      try {
-        // Simulate API call with timeout
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // In a real app, you would check credentials against your backend here
-        // This is a simplified mock authentication for demonstration
-        const userData = localStorage.getItem('userData');
-        
-        if (userData) {
-          const parsedUserData = JSON.parse(userData);
-          
-          // Check if email matches stored email
-          if (parsedUserData.email === formData.email) {
-            // Authentication successful
-            localStorage.setItem('isAuthenticated', 'true');
-            
-            // Navigate to dashboard
-            navigate('/');
-          } else {
-            // Authentication failed
-            setLoginError('Invalid email or password');
-          }
-        } else {
-          // No user data found
-          setLoginError('No account found with this email. Please sign up.');
-        }
-      } catch (error) {
-        console.error('Error submitting form:', error);
-        setLoginError('An error occurred. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
+      await loginWithCredentials(formData.email, formData.password);
     }
   };
 
   // Demo login for quick testing
-  const handleDemoLogin = (): void => {
-    setIsSubmitting(true);
-    
-    // Create demo user data
-    const demoUserData = {
-      firstName: 'Ahmed',
-      lastName: 'Amer',
-      email: 'demo@example.com',
-      marketName: 'Teddy store',
-      marketLocation: 'Cairo, Egypt',
-      rememberMe: true
-    };
-    
-    // Save to localStorage
-    localStorage.setItem('userData', JSON.stringify(demoUserData));
-    localStorage.setItem('isAuthenticated', 'true');
-    
-    // Add slight delay for better UX
-    setTimeout(() => {
-      navigate('/');
-    }, 1000);
+  const handleDemoLogin = async (): Promise<void> => {
+    await loginWithCredentials('demo@example.com', 'Demo123');
   };
 
   // Check if field has error
-  const hasError = (field: keyof LoginFormData): boolean => Boolean(touched[field] && errors[field]);
+  const hasError = (field: keyof FormData): boolean => {
+    return Boolean(touched[field] && errors[field]);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -184,11 +255,31 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        <h2 className="text-center text-3xl font-bold text-gray-800 mb-8">Login</h2>
+        <h2 className="text-center text-3xl font-bold text-gray-800 mb-8">Sign In</h2>
+        
+        {apiError && (
+          <div className="mb-4 p-3 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-md">
+            <p className="font-medium">Connection Error</p>
+            <p>{apiError}</p>
+            <button 
+              onClick={testApiConnection}
+              className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-500"
+            >
+              Test API Connection
+            </button>
+          </div>
+        )}
         
         {loginError && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
-            <p>{loginError}</p>
+          <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md">
+            {loginError}
+          </div>
+        )}
+        
+        {debugInfo && (
+          <div className="mb-4 p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-md text-xs">
+            <p className="font-medium">Debug Info:</p>
+            <p>{debugInfo}</p>
           </div>
         )}
         
@@ -206,7 +297,7 @@ const Login: React.FC = () => {
               onBlur={handleBlur}
               required
               className={`w-full px-3 py-2 border ${hasError('email') ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all`}
-              placeholder="ahmed.amer@gmail.com"
+              placeholder="Email address"
             />
             {hasError('email') && (
               <p className="mt-1 text-xs text-red-500">{errors.email}</p>
@@ -227,7 +318,7 @@ const Login: React.FC = () => {
                 onBlur={handleBlur}
                 required
                 className={`w-full px-3 py-2 border ${hasError('password') ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 transition-all`}
-                placeholder="************"
+                placeholder="Password"
               />
               <button
                 type="button"
@@ -262,8 +353,8 @@ const Login: React.FC = () => {
                 Remember me
               </label>
             </div>
-            <div>
-              <a href="#" className="text-sm text-blue-600 hover:text-blue-500 transition-colors">
+            <div className="text-sm">
+              <a href="#" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
                 Forgot password?
               </a>
             </div>
@@ -281,10 +372,10 @@ const Login: React.FC = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Logging in...
+                  Signing in...
                 </>
               ) : (
-                'Login'
+                'Sign In'
               )}
             </button>
           </div>
@@ -294,9 +385,10 @@ const Login: React.FC = () => {
             <button
               type="button"
               onClick={handleDemoLogin}
-              className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={isSubmitting}
+              className={`w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Demo Login (Skip Authentication)
+              Demo Login
             </button>
           </div>
           

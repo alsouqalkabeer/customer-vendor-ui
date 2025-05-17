@@ -11,7 +11,7 @@ import MarketProducts from './pages/MarketProducts';
 import MerchantServices from './pages/MerchantServices';
 import DeliveryAddresses from './pages/DeliveryAddresses';
 import SignUp from './pages/SignUp';
-import Login from './pages/Login'; // Import the new Login component
+import Login from './pages/Login';
 
 // Layout component that wraps the dashboard pages
 interface DashboardLayoutProps {
@@ -65,7 +65,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Get authentication status from localStorage or your auth state
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   
-  // If not authenticated, redirect to login page (changed from signup to login)
+  // If not authenticated, redirect to login page
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -73,13 +73,28 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+// Home route to handle root path redirections based on authentication
+const HomeRoute: React.FC = () => {
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  
+  // Redirect to dashboard if authenticated, otherwise to login
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
+};
+
 const App: React.FC = () => {
   return (
     <Router>
       <Routes>
+        {/* Root path - redirect based on authentication status */}
+        <Route path="/" element={<HomeRoute />} />
+        
         {/* Auth routes - publicly accessible */}
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/login" element={<Login />} /> {/* Add login route */}
+        <Route path="/login" element={<Login />} />
         
         {/* Dashboard routes - protected by authentication */}
         <Route path="/dashboard" element={
@@ -88,8 +103,45 @@ const App: React.FC = () => {
           </ProtectedRoute>
         } />
         
-        {/* Redirect any unknown routes to login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Individual dashboard page routes if needed */}
+        <Route path="/account" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/store" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/requests" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/products" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/services" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/delivery" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        } />
+        
+        {/* Redirect any unknown routes based on authentication */}
+        <Route path="*" element={<HomeRoute />} />
       </Routes>
     </Router>
   );
