@@ -1,11 +1,15 @@
 import React, { useState, useEffect, ChangeEvent, FocusEvent, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { authService } from '../services/apiService';
+import { isDevelopment } from '../config/apiConfig';
 
 // Define interfaces for our form data and errors
 interface FormData {
   firstName: string;
   lastName: string;
   email: string;
+  marketName: string;
+  marketLocation: string;
   password: string;
   confirmPassword: string;
   rememberMe: boolean;
@@ -15,6 +19,8 @@ interface FormErrors {
   firstName?: string;
   lastName?: string;
   email?: string;
+  marketName?: string;
+  marketLocation?: string;
   password?: string;
   confirmPassword?: string;
 }
@@ -22,13 +28,6 @@ interface FormErrors {
 interface TouchedFields {
   [key: string]: boolean;
 }
-
-// Dynamically set the API URL based on the environment
-const isDevelopment = window.location.hostname === 'localhost';
-const API_BASE_URL = isDevelopment 
-  ? 'http://localhost:5001' 
-  : 'http://157.245.108.130:5173';
-const API_REGISTER_URL = `${API_BASE_URL}/api/auth/register`;
 
 const SignUp: React.FC = () => {
   const navigate = useNavigate();
@@ -38,6 +37,8 @@ const SignUp: React.FC = () => {
     firstName: '',
     lastName: '',
     email: '',
+    marketName: '',
+    marketLocation: '',
     password: '',
     confirmPassword: '',
     rememberMe: false
@@ -50,6 +51,11 @@ const SignUp: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [signupError, setSignupError] = useState<string>('');
+  
+  // Toast notification state
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // Check if user is already authenticated - if yes, redirect to dashboard
   useEffect(() => {
@@ -64,6 +70,17 @@ const SignUp: React.FC = () => {
       validateForm();
     }
   }, [formData, touched]);
+  
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const { name, value, type, checked } = e.target;
@@ -93,6 +110,13 @@ const SignUp: React.FC = () => {
       setShowConfirmPassword(prevState => !prevState);
     }
   };
+  
+  // Show toast notification
+  const showToastNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
 
   const validateForm = (): boolean => {
     let newErrors: FormErrors = {};
@@ -116,6 +140,16 @@ const SignUp: React.FC = () => {
       newErrors.email = 'Email is required';
     } else if (touched.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is not valid';
+    }
+    
+    // Market Name validation
+    if (touched.marketName && !formData.marketName) {
+      newErrors.marketName = 'Market Name is required';
+    }
+    
+    // Market Location validation
+    if (touched.marketLocation && !formData.marketLocation) {
+      newErrors.marketLocation = 'Market Location is required';
     }
     
     // Password validation
@@ -155,68 +189,60 @@ const SignUp: React.FC = () => {
       setIsSubmitting(true);
       
       try {
-        // In a real app, make an API call to register the user
-        console.log(`Attempting to register with email: ${formData.email}`);
-        console.log(`API URL: ${API_REGISTER_URL}`);
+        // Use provided market name or generate if empty
+        const finalMarketName = formData.marketName || `${formData.firstName}'s Store`;
+        const finalMarketLocation = formData.marketLocation || 'Cairo, Egypt';
         
         // Create request payload (omit confirmPassword)
         const payload = {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          marketName: finalMarketName,
+          marketLocation: finalMarketLocation
         };
         
-        // Set up fetch options
-        const requestOptions = {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        };
+        console.log(`Attempting to register with email: ${formData.email}`);
         
-        // Make the API request
-        const response = await fetch(API_REGISTER_URL, requestOptions);
+        // Use the auth service to register
+        const data = await authService.register(payload);
         
-        // Process the response
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorData;
-          
-          try {
-            errorData = JSON.parse(errorText);
-          } catch (e) {
-            errorData = { message: `Registration failed with status: ${response.status}` };
-          }
-          
-          throw new Error(errorData.message || 'Registration failed');
-        }
+        // Log response for debugging
+        console.log('Registration successful:', data);
         
-        const data = await response.json();
+        // Show success toast
+        showToastNotification(`Account created successfully! Redirecting to login...`);
         
-        // Save user data to localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userData', JSON.stringify(data.user));
-        localStorage.setItem('isAuthenticated', 'true');
+        // Instead of saving to localStorage and going to dashboard,
+        // we'll redirect to login page with a success message
+        setTimeout(() => {
+          navigate('/login', { 
+            state: { 
+              registrationSuccess: true, 
+              email: formData.email,
+              message: 'Account created successfully! Please sign in with your credentials.'
+            } 
+          });
+        }, 2000); // Give some time for the user to see the toast
         
-        // Navigate to dashboard
-        navigate('/dashboard');
       } catch (error) {
         console.error('Error submitting form:', error);
         
         if (error instanceof Error) {
           if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            const serverUrl = isDevelopment ? 'localhost:5001' : '157.245.108.130:5173';
+            const serverUrl = isDevelopment ? 'localhost:5001' : '157.245.108.130:5001';
             setSignupError(`Cannot connect to the server. Please make sure the backend server is running on ${serverUrl}.`);
           } else if (error.message.includes('Email already registered')) {
             setSignupError('This email is already registered. Please use a different email or try signing in.');
           } else {
             setSignupError(error.message || 'Registration failed. Please try again.');
           }
+          // Show error toast
+          showToastNotification(error.message || 'Registration failed. Please try again.', 'error');
         } else {
           setSignupError('An unknown error occurred. Please try again.');
+          showToastNotification('An unknown error occurred. Please try again.', 'error');
         }
       } finally {
         setIsSubmitting(false);
@@ -224,77 +250,44 @@ const SignUp: React.FC = () => {
     }
   };
 
-  const handleGoogleSignUp = (): void => {
-    // In a real app, you would implement Google OAuth here
-    console.log('Google sign up clicked');
-  };
-
-  const handleFacebookSignUp = (): void => {
-    // In a real app, you would implement Facebook OAuth here
-    console.log('Facebook sign up clicked');
-  };
-
-  // Demo login for quick testing
-  const handleDemoLogin = (): void => {
-    setIsSubmitting(true);
-    
-    // Create demo user data
-    const demoUserData = {
-      firstName: 'Ahmed',
-      lastName: 'Amer',
-      email: 'demo@example.com',
-      rememberMe: true
-    };
-    
-    // Save to localStorage
-    localStorage.setItem('userData', JSON.stringify(demoUserData));
-    localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('token', `demo-token-${Date.now()}`);
-    
-    // Add slight delay for better UX
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 1000);
-  };
-
   // Check if field has error
   const hasError = (field: keyof FormData): boolean => Boolean(touched[field] && errors[field]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <div className="max-w-md mx-auto w-full">
-        <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+      {/* Toast notification */}
+      {showToast && (
+        <div className={`fixed top-4 right-4 px-6 py-3 rounded-md shadow-md z-50 ${
+          toastType === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`}>
           <div className="flex items-center">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {toastType === 'success' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-            </div>
-            <span className="ml-2 text-lg font-medium text-blue-600">Nosha</span>
-          </div>
-          
-          <div className="flex space-x-2">
-            <button className="px-4 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-              Sign Up
-            </button>
-            <button className="px-4 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-              Start free trial
-            </button>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span>{toastMessage}</span>
           </div>
         </div>
-
-        <h1 className="text-3xl font-bold text-center mb-6">Sign Up</h1>
+      )}
+      
+      <div className="w-full max-w-xl bg-white rounded-lg shadow-sm p-8">
+        <h1 className="text-4xl font-bold text-center text-gray-800 mb-8">Sign Up</h1>
         
         {signupError && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md">
+          <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-md">
             {signupError}
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
                 First Name
               </label>
               <input
@@ -304,7 +297,7 @@ const SignUp: React.FC = () => {
                 value={formData.firstName}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Ahmed"
               />
               {hasError('firstName') && (
@@ -312,7 +305,7 @@ const SignUp: React.FC = () => {
               )}
             </div>
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
                 Last Name
               </label>
               <input
@@ -322,7 +315,7 @@ const SignUp: React.FC = () => {
                 value={formData.lastName}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Amer"
               />
               {hasError('lastName') && (
@@ -332,7 +325,7 @@ const SignUp: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               Email
             </label>
             <input
@@ -342,21 +335,60 @@ const SignUp: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               onBlur={handleBlur}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="ahmed.amer@gmail.com"
             />
             {hasError('email') && (
               <p className="mt-1 text-xs text-red-500">{errors.email}</p>
             )}
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="marketName" className="block text-sm font-medium text-gray-700 mb-2">
+                Market Name
+              </label>
+              <input
+                id="marketName"
+                name="marketName"
+                type="text"
+                value={formData.marketName}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ahmed"
+              />
+              {hasError('marketName') && (
+                <p className="mt-1 text-xs text-red-500">{errors.marketName}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="marketLocation" className="block text-sm font-medium text-gray-700 mb-2">
+                Market Location
+              </label>
+              <input
+                id="marketLocation"
+                name="marketLocation"
+                type="text"
+                value={formData.marketLocation}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Cairo, Egypt"
+              />
+              {hasError('marketLocation') && (
+                <p className="mt-1 text-xs text-red-500">{errors.marketLocation}</p>
+              )}
+            </div>
+          </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
             <div className="relative">
               <div className="flex">
-                <span className="inline-flex items-center px-3 py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                <span className="inline-flex items-center justify-center px-4 py-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
@@ -368,7 +400,7 @@ const SignUp: React.FC = () => {
                   value={formData.password}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 min-w-0 block w-full px-4 py-3 rounded-none rounded-r-md bg-gray-50 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="••••••••••••••"
                 />
               </div>
@@ -389,12 +421,12 @@ const SignUp: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
             <div className="relative">
               <div className="flex">
-                <span className="inline-flex items-center px-3 py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                <span className="inline-flex items-center justify-center px-4 py-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
@@ -406,7 +438,7 @@ const SignUp: React.FC = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 min-w-0 block w-full px-4 py-3 rounded-none rounded-r-md bg-gray-50 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="••••••••••••••"
                 />
               </div>
@@ -433,7 +465,7 @@ const SignUp: React.FC = () => {
               type="checkbox"
               checked={formData.rememberMe}
               onChange={handleChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
               Remember me
@@ -442,7 +474,7 @@ const SignUp: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="w-full py-3 px-4 bg-blue-500 text-white rounded-md font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center">
@@ -457,47 +489,20 @@ const SignUp: React.FC = () => {
             )}
           </button>
           
-          <p className="text-sm text-center text-gray-600 mt-2">
+          <p className="text-sm text-center text-gray-600 mt-4">
             By clicking Agree & Join or Continue, you agree to the Nosha{' '}
             <a href="#" className="text-blue-600 hover:underline">User Agreement</a>,{' '}
-            <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>, and{' '}
+            <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>,{' '}
+            and{' '}
             <a href="#" className="text-blue-600 hover:underline">Cookie Policy</a>.
           </p>
 
-          <div className="flex items-center justify-center mt-4 mb-4">
-            <div className="grow h-0.5 bg-gray-200"></div>
-            <span className="px-4 text-gray-500 text-sm uppercase">OR</span>
-            <div className="grow h-0.5 bg-gray-200"></div>
+          <div className="text-center mt-6">
+            <p className="text-gray-600 mb-2">Already have an account?</p>
+            <Link to="/login" className="text-blue-600 hover:underline">
+              Sign in
+            </Link>
           </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleSignUp}
-            className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3"
-          >
-            <svg width="20" height="20" className="mr-2" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"
-              />
-            </svg>
-            Google
-          </button>
-
-          <button
-            type="button"
-            onClick={handleFacebookSignUp}
-            className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" className="mr-2">
-              <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
-            </svg>
-            Facebook
-          </button>
-
-          <p className="text-center text-sm text-gray-600 mt-4">
-            Already on Hire Flow? <Link to="/login" className="text-blue-600 hover:underline">Sign in</Link>
-          </p>
         </form>
       </div>
     </div>

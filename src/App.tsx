@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './component/Header';
 import Sidebar from './component/Sidebar';
@@ -15,40 +15,19 @@ import Login from './pages/Login';
 
 // Layout component that wraps the dashboard pages
 interface DashboardLayoutProps {
-  children?: ReactNode;
+  children: ReactNode;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const [activePage, setActivePage] = useState<string>('dashboard');
-
-  const renderPage = () => {
-    switch (activePage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'account':
-        return <AccountSetting />;
-      case 'store':
-        return <StoreSetting />;
-      case 'requests':
-        return <Requests />;
-      case 'products':
-        return <MarketProducts />;
-      case 'services':
-        return <MerchantServices />;
-      case 'delivery':
-        return <DeliveryAddresses />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <div className="flex flex-grow">
-        <Sidebar activePage={activePage} setActivePage={setActivePage} />
+        <Sidebar />
         <div className="flex-grow flex flex-col">
-          {renderPage()}
+          <main className="flex-grow p-6">
+            {children}
+          </main>
           <Footer />
         </div>
       </div>
@@ -99,44 +78,57 @@ const App: React.FC = () => {
         {/* Dashboard routes - protected by authentication */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout>
+              <Dashboard />
+            </DashboardLayout>
           </ProtectedRoute>
         } />
         
-        {/* Individual dashboard page routes if needed */}
         <Route path="/account" element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout>
+              <AccountSetting />
+            </DashboardLayout>
           </ProtectedRoute>
         } />
         
         <Route path="/store" element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout>
+              <StoreSetting />
+            </DashboardLayout>
           </ProtectedRoute>
         } />
         
         <Route path="/requests" element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout>
+              <Requests />
+            </DashboardLayout>
           </ProtectedRoute>
         } />
         
         <Route path="/products" element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout>
+              <MarketProducts />
+            </DashboardLayout>
           </ProtectedRoute>
         } />
         
         <Route path="/services" element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout>
+              <MerchantServices />
+            </DashboardLayout>
           </ProtectedRoute>
         } />
         
         <Route path="/delivery" element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout>
+              <DeliveryAddresses />
+            </DashboardLayout>
           </ProtectedRoute>
         } />
         

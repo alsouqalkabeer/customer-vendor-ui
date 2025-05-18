@@ -1,227 +1,184 @@
-import React from 'react';
-import { 
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell
-} from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { apiCall, dashboardService } from '../services/apiService';
+import { VENDOR_ENDPOINTS } from '../config/apiConfig';
 
 const Dashboard = () => {
-  // Sample data for charts
-  const weeklyData = [
-    { name: 'SUN', income: 8000, deposit: 5000, spendings: 4000 },
-    { name: 'MON', income: 7000, deposit: 6000, spendings: 5000 },
-    { name: 'TUE', income: 9000, deposit: 5500, spendings: 7000 },
-    { name: 'WED', income: 8500, deposit: 6500, spendings: 6000 },
-    { name: 'THU', income: 10000, deposit: 7000, spendings: 8000 },
-    { name: 'FRI', income: 9500, deposit: 6000, spendings: 7500 },
-    { name: 'SAT', income: 8000, deposit: 5500, spendings: 6500 },
-  ];
-
-  const salesData = [
-    { name: 'Jan', sales: 4000 },
-    { name: 'Feb', sales: 5000 },
-    { name: 'Mar', sales: 6000 },
-    { name: 'Apr', sales: 7000 },
-    { name: 'May', sales: 8000 },
-  ];
-
-  const pieData = [
-    { name: 'Product A', value: 60 },
-    { name: 'Product B', value: 40 },
-  ];
-
-  const COLORS = ['#0088FE', '#ECEFF1'];
-
-  const recentOrders = [
-    { id: '#1', product: 'Teddy Bear XL', customer: 'Ahmed Mohamed', date: '2024-05-10', status: 'Pending' },
-    { id: '#2', product: 'Plush Bunny', customer: 'Sarah Johnson', date: '2024-05-09', status: 'Shipped' },
-    { id: '#3', product: 'Soft Elephant', customer: 'Mahmoud Ali', date: '2024-05-08', status: 'Delivered' },
-  ];
-
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [error, setError] = useState("");
+  
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Get the vendor ID from localStorage
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const vendorId = userData?.id;
+        
+        if (!vendorId) {
+          throw new Error('Vendor ID not found');
+        }
+        
+        // Use the dashboardService to fetch data
+        const response = await dashboardService.getDashboardData(vendorId);
+        
+        setDashboardData(response);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, []);
+  
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading dashboard...</div>;
+  }
+  
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="p-4 bg-red-50 text-red-700 rounded-md">
+          {error}
+        </div>
+      </div>
+    );
+  }
+  
+  const { vendor, dashboard } = dashboardData as any;
+  const { overview, analytics, lastOrders } = dashboard;
+  
   return (
-    <div className="p-6 fade-in slide-in">
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-      <p className="text-gray-600 mb-6">Welcome to your store dashboard</p>
-      
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="card">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Product Overview</h3>
-              <p className="text-2xl font-bold text-blue-600 mt-2">50,000$</p>
-              <p className="text-xs text-gray-500">Total Sales</p>
+    <>
+      {/* Main content */}
+      <div className="flex-1 overflow-auto">
+        <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+        <p className="text-gray-600 mb-6">Welcome to your store dashboard</p>
+        
+        {/* Overview cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-6 rounded shadow-sm">
+            <div className="flex justify-between">
+              <h3 className="text-sm text-gray-500 font-medium">Product Overview</h3>
+              <span className="text-green-500 text-xs">+25%</span>
             </div>
-            <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">
-              +25%
+            <div className="mt-2">
+              <div className="text-2xl font-bold text-blue-500">{overview.totalSales.toLocaleString()}$</div>
+              <div className="text-xs text-gray-500">Total Sales</div>
+            </div>
+            <div className="mt-4 h-16 bg-blue-100 bg-opacity-50"></div>
+            <div className="mt-2 text-right">
+              <a href="#" className="text-xs text-blue-500">See details →</a>
             </div>
           </div>
-          <div className="h-24">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
-                <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="sales" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSales)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          
+          <div className="bg-white p-6 rounded shadow-sm">
+            <div className="flex justify-between">
+              <h3 className="text-sm text-gray-500 font-medium">Active sales</h3>
+              <span className="text-blue-500 text-xs">+15%</span>
+            </div>
+            <div className="mt-2">
+              <div className="text-2xl font-bold text-blue-500">{overview.activeSales.toLocaleString()}$</div>
+              <div className="text-xs text-gray-500">per month</div>
+            </div>
+            <div className="mt-4 h-16 flex space-x-1">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex-1 bg-blue-500 rounded-sm" style={{ height: `${60 + i * 8}%` }}></div>
+              ))}
+            </div>
+            <div className="mt-2 text-right">
+              <a href="#" className="text-xs text-blue-500">See details →</a>
+            </div>
           </div>
-          <div className="mt-2 text-right">
-            <button className="text-blue-600 text-sm hover:underline">
-              See details →
-            </button>
+          
+          <div className="bg-white p-6 rounded shadow-sm">
+            <div className="flex justify-between">
+              <h3 className="text-sm text-gray-500 font-medium">Product Revenue</h3>
+              <span className="text-green-500 text-xs">+8%</span>
+            </div>
+            <div className="mt-2">
+              <div className="text-2xl font-bold text-blue-500">{overview.productRevenue.toLocaleString()}$</div>
+              <div className="text-xs text-gray-500">last month</div>
+            </div>
+            <div className="mt-4 h-16 flex items-center justify-center">
+              <div className="w-16 h-16 border-4 border-blue-500 rounded-full"></div>
+            </div>
+            <div className="mt-2 text-right">
+              <a href="#" className="text-xs text-blue-500">See details →</a>
+            </div>
           </div>
         </div>
         
-        <div className="card">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Active sales</h3>
-              <p className="text-2xl font-bold text-blue-600 mt-2">28,000$</p>
-              <p className="text-xs text-gray-500">per month</p>
-            </div>
-            <div className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
-              +15%
+        {/* Analytics section */}
+        <div className="bg-white p-6 rounded shadow-sm mb-8">
+          <h3 className="text-sm text-gray-500 font-medium mb-2">Analytics</h3>
+          <div>
+            <div className="text-2xl font-bold text-blue-500">{overview.dailyIncome.toLocaleString()}$</div>
+            <div className="text-xs text-gray-500">Today's Income</div>
+          </div>
+          
+          <div className="mt-4 h-48">
+            <div className="flex h-full items-end space-x-8">
+              {analytics.chartData.map((day, index) => (
+                <div key={index} className="flex-1 flex flex-col items-center space-y-1">
+                  <div className="w-full bg-green-400" style={{ height: `${day.income/200}px` }}></div>
+                  <div className="w-full bg-yellow-400" style={{ height: `${day.depositIncome/200}px` }}></div>
+                  <div className="w-full bg-red-400" style={{ height: `${day.spendings/200}px` }}></div>
+                  <div className="text-xs text-gray-500 mt-1">{day.dayOfWeek}</div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="h-24">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={salesData}>
-                <Bar dataKey="sales" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 text-right">
-            <button className="text-blue-600 text-sm hover:underline">
-              See details →
-            </button>
+          
+          <div className="mt-4 flex space-x-4">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-400 rounded-full mr-1"></div>
+              <span className="text-xs text-gray-500">Income</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-yellow-400 rounded-full mr-1"></div>
+              <span className="text-xs text-gray-500">Deposit Income</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-red-400 rounded-full mr-1"></div>
+              <span className="text-xs text-gray-500">Spendings</span>
+            </div>
           </div>
         </div>
         
-        <div className="card">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Product Revenue</h3>
-              <p className="text-2xl font-bold text-blue-600 mt-2">16,000$</p>
-              <p className="text-xs text-gray-500">last month</p>
-            </div>
-            <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">
-              +8%
-            </div>
-          </div>
-          <div className="h-24 flex justify-center">
-            <ResponsiveContainer width="60%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={30}
-                  outerRadius={40}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 text-right">
-            <button className="text-blue-600 text-sm hover:underline">
-              See details →
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Analytics Chart */}
-      <div className="card mb-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-4">Analytics</h3>
-        <div className="mb-3">
-          <h4 className="text-sm text-gray-500">Today's Income</h4>
-          <p className="text-2xl font-bold text-blue-600">15,000$</p>
-        </div>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={weeklyData}
-              margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis hide={true} />
-              <Tooltip />
-              <Bar dataKey="income" fill="#4ade80" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="deposit" fill="#eab308" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="spendings" fill="#ef4444" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex gap-6 mt-4">
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-            <span className="text-sm">Income</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-            <span className="text-sm">Deposit income</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-            <span className="text-sm">Spendings</span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Recent Orders */}
-      <div className="card">
-        <h3 className="text-lg font-medium mb-4">Last Orders</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+        {/* Orders table */}
+        <div className="bg-white p-6 rounded shadow-sm">
+          <h3 className="text-sm text-gray-500 font-medium mb-4">Last Orders</h3>
+          <table className="w-full">
+            <thead>
+              <tr className="text-left text-xs text-gray-500">
+                <th className="pb-2">ID</th>
+                <th className="pb-2">PRODUCT</th>
+                <th className="pb-2">CUSTOMER</th>
+                <th className="pb-2">DATE</th>
+                <th className="pb-2">STATUS</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.product}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{order.customer}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
-                        order.status === 'Shipped' ? 'bg-blue-100 text-blue-800' : 
-                        'bg-green-100 text-green-800'}`}>
-                      {order.status}
+            <tbody>
+              {lastOrders.map((order, index) => (
+                <tr key={index} className="border-t border-gray-100">
+                  <td className="py-3 text-sm">#{order.orderNumber}</td>
+                  <td className="py-3 text-sm">Product Name</td>
+                  <td className="py-3 text-sm">{order.customerName}</td>
+                  <td className="py-3 text-sm">{new Date(order.createdAt).toLocaleDateString()}</td>
+                  <td className="py-3 text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                      order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                      order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </span>
                   </td>
                 </tr>
@@ -230,7 +187,7 @@ const Dashboard = () => {
           </table>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
