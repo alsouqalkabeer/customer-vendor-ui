@@ -216,15 +216,26 @@ const SignUp: React.FC = () => {
         
         // Instead of saving to localStorage and going to dashboard,
         // we'll redirect to login page with a success message
+        // setTimeout(() => {
+        //   navigate('/login', {
+        //     state: {
+        //       registrationSuccess: true,
+        //       email: formData.email,
+        //       message: 'Account created successfully! Please sign in with your credentials.'
+        //     }
+        //   });
+        // }, 2000); // Give some time for the user to see the toast
+        
+        showToastNotification(`Account created successfully! Redirecting to dashboard...`);
+
+// Set user as authenticated and mark as new user to trigger onboarding flow
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('isNewUser', 'true');
+
+        // Redirect to dashboard/welcome page (onboarding)
         setTimeout(() => {
-          navigate('/login', { 
-            state: { 
-              registrationSuccess: true, 
-              email: formData.email,
-              message: 'Account created successfully! Please sign in with your credentials.'
-            } 
-          });
-        }, 2000); // Give some time for the user to see the toast
+          navigate('/welcome');
+        }, 2000); // Gi
         
       } catch (error) {
         console.error('Error submitting form:', error);

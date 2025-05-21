@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './component/Header';
 import Sidebar from './component/Sidebar';
@@ -12,10 +12,12 @@ import MerchantServices from './pages/MerchantServices';
 import DeliveryAddresses from './pages/DeliveryAddresses';
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
+import WelcomeCards from './pages/WelcomeCards';
+import SetupCompletionCards from './pages/SetupCompletionCards';
 
 // Layout component that wraps the dashboard pages
 interface DashboardLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
@@ -37,7 +39,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
 // Protected Route component to ensure only authenticated users can access dashboard
 interface ProtectedRouteProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
@@ -52,16 +54,38 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+// Route to handle newly signed up users
+interface NewUserRouteProps {
+  children: React.ReactNode;
+}
+
+const NewUserRoute: React.FC<NewUserRouteProps> = ({ children }) => {
+  // Check if user is new (just completed signup)
+  const isNewUser = localStorage.getItem('isNewUser') === 'true';
+  
+  // If new user, show setup completion cards
+  if (isNewUser) {
+    return <SetupCompletionCards />;
+  }
+  
+  return <>{children}</>;
+};
+
 // Home route to handle root path redirections based on authentication
 const HomeRoute: React.FC = () => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const isNewUser = localStorage.getItem('isNewUser') === 'true';
   
-  // Redirect to dashboard if authenticated, otherwise to login
-  return isAuthenticated ? (
-    <Navigate to="/dashboard" replace />
-  ) : (
-    <Navigate to="/login" replace />
-  );
+  // Redirect based on user status
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (isNewUser) {
+    return <Navigate to="/welcome" replace />;
+  }
+  
+  return <Navigate to="/dashboard" replace />;
 };
 
 const App: React.FC = () => {
@@ -75,60 +99,81 @@ const App: React.FC = () => {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         
+        {/* Onboarding routes for new users */}
+        <Route path="/welcome" element={
+          <ProtectedRoute>
+            <SetupCompletionCards />
+          </ProtectedRoute>
+        } />
+        
         {/* Dashboard routes - protected by authentication */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <Dashboard />
-            </DashboardLayout>
+            <NewUserRoute>
+              <DashboardLayout>
+                <Dashboard />
+              </DashboardLayout>
+            </NewUserRoute>
           </ProtectedRoute>
         } />
         
         <Route path="/account" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <AccountSetting />
-            </DashboardLayout>
+            <NewUserRoute>
+              <DashboardLayout>
+                <AccountSetting />
+              </DashboardLayout>
+            </NewUserRoute>
           </ProtectedRoute>
         } />
         
         <Route path="/store" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <StoreSetting />
-            </DashboardLayout>
+            <NewUserRoute>
+              <DashboardLayout>
+                <StoreSetting />
+              </DashboardLayout>
+            </NewUserRoute>
           </ProtectedRoute>
         } />
         
         <Route path="/requests" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <Requests />
-            </DashboardLayout>
+            <NewUserRoute>
+              <DashboardLayout>
+                <Requests />
+              </DashboardLayout>
+            </NewUserRoute>
           </ProtectedRoute>
         } />
         
         <Route path="/products" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <MarketProducts />
-            </DashboardLayout>
+            <NewUserRoute>
+              <DashboardLayout>
+                <MarketProducts />
+              </DashboardLayout>
+            </NewUserRoute>
           </ProtectedRoute>
         } />
         
         <Route path="/services" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <MerchantServices />
-            </DashboardLayout>
+            <NewUserRoute>
+              <DashboardLayout>
+                <MerchantServices />
+              </DashboardLayout>
+            </NewUserRoute>
           </ProtectedRoute>
         } />
         
         <Route path="/delivery" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <DeliveryAddresses />
-            </DashboardLayout>
+            <NewUserRoute>
+              <DashboardLayout>
+                <DeliveryAddresses />
+              </DashboardLayout>
+            </NewUserRoute>
           </ProtectedRoute>
         } />
         
