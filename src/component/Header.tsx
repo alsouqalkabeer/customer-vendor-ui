@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 
 interface UserData {
   firstName?: string;
@@ -10,90 +10,385 @@ interface UserData {
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(3);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const userDataString = localStorage.getItem('userData');
   const userData: UserData = userDataString ? JSON.parse(userDataString) : {};
   
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Close mobile menu on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
-    // Don't remove userData to allow easier login
-    navigate('/login'); // Navigate to login instead of signup
+    localStorage.removeItem('userData');
+    setIsUserMenuOpen(false);
+    setIsMobileMenuOpen(false);
+    navigate('/login');
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+    setIsUserMenuOpen(false); // Close user menu when opening mobile menu
+  };
+
+  const toggleUserMenu = () => {
+    setIsUserMenuOpen(!isUserMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
+  const getUserInitials = (): string => {
+    if (userData.firstName && userData.lastName) {
+      return `${userData.firstName.charAt(0)}${userData.lastName.charAt(0)}`;
+    } else if (userData.firstName) {
+      return userData.firstName.charAt(0).toUpperCase();
+    }
+    return 'U';
   };
 
   return (
-    <div className="bg-white py-4 px-6 flex justify-between items-center border-b shadow-sm">
-      <div className="flex items-center">
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center mr-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-semibold text-blue-800">Nosha</h1>
-      </div>
-      
-      <div className="flex items-center space-x-3">
-        <button className="px-3 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">Help</button>
-        <button className="px-3 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">Plans</button>
-        
-        {isAuthenticated ? (
-          // Show these options when user is logged in
-          <>
-            <div className="relative group">
-              <button className="px-4 py-2 flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                <span>{userData.marketName || 'My Store'}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
-                <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">Store Settings</a>
-                <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">Account</a>
-                <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">Billing</a>
-              </div>
-            </div>
+    <>
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
             
-            <div className="flex items-center space-x-3">
-              <button className="relative p-1 text-gray-600 hover:text-blue-600 focus:outline-none focus:text-blue-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">3</span>
+            {/* Logo */}
+            <Link to="/" className="flex items-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center mr-2">
+                <i className="bx bx-check text-white text-lg"></i>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-blue-800 hidden sm:block">Nosha</h1>
+              <h1 className="text-lg font-semibold text-blue-800 sm:hidden">Nosha</h1>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+              
+              {/* Common Links */}
+              <button className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 font-medium">
+                Help
+              </button>
+              <button className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 font-medium">
+                Plans
               </button>
               
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-semibold">
-                {userData.firstName ? userData.firstName.charAt(0) : 'U'}
-              </div>
+              {isAuthenticated ? (
+                /* Authenticated User Menu */
+                <div className="flex items-center space-x-4">
+                  
+                  {/* Store Dropdown */}
+                  <div className="relative" ref={userMenuRef}>
+                    <button 
+                      onClick={toggleUserMenu}
+                      className="px-3 py-2 flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors duration-200 rounded-lg hover:bg-blue-50"
+                    >
+                      <i className="bx bx-store text-lg"></i>
+                      <span className="font-medium">{userData.marketName || 'My Store'}</span>
+                      <i className={`bx bx-chevron-down text-sm transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`}></i>
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {isUserMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                        <div className="px-4 py-2 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">{userData.firstName} {userData.lastName}</p>
+                          <p className="text-xs text-gray-500">{userData.email}</p>
+                        </div>
+                        
+                        <Link 
+                          to="/store" 
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <i className="bx bx-cog mr-3"></i>
+                          Store Settings
+                        </Link>
+                        <Link 
+                          to="/account" 
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <i className="bx bx-user mr-3"></i>
+                          Account Settings
+                        </Link>
+                        <Link 
+                          to="/billing" 
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <i className="bx bx-credit-card mr-3"></i>
+                          Billing & Plans
+                        </Link>
+                        <div className="border-t border-gray-100 mt-2 pt-2">
+                          <button 
+                            onClick={handleLogout}
+                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                          >
+                            <i className="bx bx-log-out mr-3"></i>
+                            Sign Out
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Notifications */}
+                  <button className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200">
+                    <i className="bx bx-bell text-xl"></i>
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[1.25rem] h-5">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
+                  </button>
+                  
+                  {/* User Avatar */}
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                      {getUserInitials()}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Non-authenticated Menu */
+                <div className="flex items-center space-x-4">
+                  <button className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200">
+                    Start Selling
+                  </button>
+                  <button className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 hover:border-blue-300 hover:text-blue-600 transition-all duration-200">
+                    Explore Stores
+                  </button>
+                  <button 
+                    onClick={() => navigate('/login')}
+                    className="px-4 py-2 text-sm border border-blue-500 rounded-lg text-blue-500 hover:bg-blue-50 transition-all duration-200 font-medium"
+                  >
+                    Login
+                  </button>
+                  <button 
+                    onClick={() => navigate('/signup')}
+                    className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-sm transition-all duration-200 font-medium"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden flex items-center space-x-2">
+              {isAuthenticated && (
+                <>
+                  {/* Mobile Notifications */}
+                  <button className="relative p-2 text-gray-600 hover:text-blue-600 rounded-lg">
+                    <i className="bx bx-bell text-xl"></i>
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[1rem] h-4">
+                        {notificationCount > 9 ? '9+' : notificationCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Mobile User Avatar */}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                    {getUserInitials()}
+                  </div>
+                </>
+              )}
               
               <button 
-                onClick={handleLogout}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50 hover:text-red-600 transition-all duration-200"
+                onClick={toggleMobileMenu}
+                className="p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors duration-200"
+                aria-label="Toggle menu"
               >
-                Logout
+                <i className={`bx ${isMobileMenuOpen ? 'bx-x' : 'bx-menu'} text-xl`}></i>
               </button>
             </div>
-          </>
-        ) : (
-          // Show these options when user is not logged in
-          <>
-            <button className="px-3 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">Start selling on Nosha</button>
-            <button className="px-3 py-2 border border-gray-200 rounded-full text-gray-700 hover:border-blue-400 hover:text-blue-600 transition-all duration-200">Stores in your city</button>
-            <button className="px-3 py-2 border border-gray-200 rounded-full text-gray-700 hover:border-blue-400 hover:text-blue-600 transition-all duration-200">Platform category</button>
-            <button 
-              onClick={() => navigate('/signup')}
-              className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 shadow-sm transition-all duration-200"
-            >
-              Sign Up
-            </button>
-            <button 
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 border border-blue-500 rounded-full text-blue-500 hover:bg-blue-50 transition-all duration-200"
-            >
-              Login
-            </button>
-          </>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div 
+            ref={mobileMenuRef}
+            className="md:hidden border-t border-gray-200 bg-white shadow-lg"
+          >
+            <div className="px-4 py-3 space-y-3">
+              
+              {isAuthenticated ? (
+                /* Authenticated Mobile Menu */
+                <>
+                  {/* User Info */}
+                  <div className="pb-3 border-b border-gray-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                        {getUserInitials()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{userData.firstName} {userData.lastName}</p>
+                        <p className="text-sm text-gray-500">{userData.email}</p>
+                        <p className="text-xs text-blue-600">{userData.marketName || 'My Store'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Navigation Links */}
+                  <div className="space-y-2">
+                    <Link 
+                      to="/dashboard" 
+                      className="flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      <i className="bx bx-home mr-3 text-lg"></i>
+                      Dashboard
+                    </Link>
+                    <Link 
+                      to="/store" 
+                      className="flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      <i className="bx bx-cog mr-3 text-lg"></i>
+                      Store Settings
+                    </Link>
+                    <Link 
+                      to="/account" 
+                      className="flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      <i className="bx bx-user mr-3 text-lg"></i>
+                      Account Settings
+                    </Link>
+                    <Link 
+                      to="/products" 
+                      className="flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      <i className="bx bx-package mr-3 text-lg"></i>
+                      Products
+                    </Link>
+                    <Link 
+                      to="/requests" 
+                      className="flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      <i className="bx bx-list-ul mr-3 text-lg"></i>
+                      Orders
+                    </Link>
+                  </div>
+
+                  {/* Common Links */}
+                  <div className="pt-3 border-t border-gray-200 space-y-2">
+                    <button className="flex items-center w-full px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                      <i className="bx bx-help-circle mr-3 text-lg"></i>
+                      Help & Support
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                      <i className="bx bx-credit-card mr-3 text-lg"></i>
+                      Plans & Billing
+                    </button>
+                  </div>
+
+                  {/* Logout */}
+                  <div className="pt-3 border-t border-gray-200">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <i className="bx bx-log-out mr-3 text-lg"></i>
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Non-authenticated Mobile Menu */
+                <>
+                  <div className="space-y-2">
+                    <button className="flex items-center w-full px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                      <i className="bx bx-store mr-3 text-lg"></i>
+                      Start Selling on Nosha
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                      <i className="bx bx-map mr-3 text-lg"></i>
+                      Stores in Your City
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                      <i className="bx bx-category mr-3 text-lg"></i>
+                      Browse Categories
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                      <i className="bx bx-help-circle mr-3 text-lg"></i>
+                      Help & Support
+                    </button>
+                  </div>
+
+                  {/* Auth Buttons */}
+                  <div className="pt-3 border-t border-gray-200 space-y-2">
+                    <button 
+                      onClick={() => {
+                        navigate('/login');
+                        closeMobileMenu();
+                      }}
+                      className="w-full px-4 py-2.5 text-center border border-blue-500 rounded-lg text-blue-500 hover:bg-blue-50 transition-all duration-200 font-medium"
+                    >
+                      Login
+                    </button>
+                    <button 
+                      onClick={() => {
+                        navigate('/signup');
+                        closeMobileMenu();
+                      }}
+                      className="w-full px-4 py-2.5 text-center bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 font-medium"
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
-      </div>
-    </div>
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-25 z-30 md:hidden"
+          onClick={closeMobileMenu}
+        ></div>
+      )}
+    </>
   );
 };
 

@@ -23,8 +23,6 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string>('');
-  
-  // Add state for success message
   const [successMessage, setSuccessMessage] = useState<string>('');
   
   // Check for registration success or demo mode from navigation state
@@ -32,7 +30,6 @@ const Login: React.FC = () => {
     if (state && state.registrationSuccess) {
       setSuccessMessage(state.message || 'Account created successfully! Please sign in with your credentials.');
       
-      // If email was passed, pre-fill it
       if (state.email) {
         setFormData(prev => ({
           ...prev,
@@ -44,7 +41,6 @@ const Login: React.FC = () => {
     if (state && state.demoMode) {
       setSuccessMessage(state.message || 'Demo mode activated. Use the default password.');
       
-      // Pre-fill with demo credentials
       if (state.email) {
         setFormData({
           email: state.email,
@@ -139,169 +135,219 @@ const Login: React.FC = () => {
     // Submit the form programmatically after a brief delay
     setTimeout(() => {
       const form = document.getElementById('login-form') as HTMLFormElement;
-      form.dispatchEvent(new Event('submit', { cancelable: true }));
+      if (form) {
+        form.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
     }, 500);
   };
   
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <div className="max-w-md mx-auto w-full">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex flex-col">
+      {/* Mobile-first responsive container */}
+      <div className="flex-1 flex items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
+        <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl">
+          
+          {/* Header Section */}
+          <div className="mb-6 sm:mb-8">
+            {/* Logo and Navigation */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 space-y-4 sm:space-y-0">
+              <div className="flex items-center justify-center sm:justify-start">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-6 sm:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="ml-2 text-lg sm:text-xl font-semibold text-blue-600">Nosha</span>
+              </div>
+              
+              <div className="flex justify-center sm:justify-end space-x-2">
+                <Link 
+                  to="/signup" 
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-100 text-blue-600 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-200 transition-colors"
+                >
+                  Sign Up
+                </Link>
+                <button className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-100 text-blue-600 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-200 transition-colors">
+                  Start free trial
+                </button>
+              </div>
             </div>
-            <span className="ml-2 text-lg font-medium text-blue-600">Nosha</span>
+
+            {/* Title */}
+            <div className="text-center">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+                Welcome Back
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600">
+                Sign in to your account to continue
+              </p>
+            </div>
           </div>
           
-          <div className="flex space-x-2">
-            <Link to="/signup" className="px-4 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-              Sign Up
-            </Link>
-            <button className="px-4 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-              Start free trial
-            </button>
-          </div>
-        </div>
-
-        <h1 className="text-3xl font-bold text-center mb-6">Sign In</h1>
-        
-        {/* Success message from registration */}
-        {successMessage && (
-          <div className="mb-4 p-3 bg-green-50 text-green-700 border border-green-200 rounded-md">
-            {successMessage}
-          </div>
-        )}
-        
-        {/* Error message */}
-        {loginError && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md">
-            {loginError}
-          </div>
-        )}
-        
-        <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="ahmed.amer@gmail.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <div className="relative">
-              <div className="flex">
-                <span className="inline-flex items-center px-3 py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                  </svg>
-                </span>
+          {/* Form Container */}
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm sm:shadow-lg border border-gray-200 p-6 sm:p-8">
+            
+            {/* Success message from registration */}
+            {successMessage && (
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm sm:text-base">
+                <div className="flex items-start">
+                  <i className="bx bx-check-circle text-lg mr-2 mt-0.5 text-green-600"></i>
+                  <span>{successMessage}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Error message */}
+            {loginError && (
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm sm:text-base">
+                <div className="flex items-start">
+                  <i className="bx bx-error-circle text-lg mr-2 mt-0.5 text-red-600"></i>
+                  <span>{loginError}</span>
+                </div>
+              </div>
+            )}
+            
+            <form id="login-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              {/* Email Field */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  <i className="bx bx-envelope mr-1"></i>
+                  Email Address
+                </label>
                 <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={formData.email}
                   onChange={handleChange}
-                  className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="••••••••••••••"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm sm:text-base"
+                  placeholder="Enter your email"
                 />
               </div>
+
+              {/* Password Field */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  <i className="bx bx-lock-alt mr-1"></i>
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2.5 sm:px-4 sm:py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm sm:text-base"
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={togglePasswordVisibility}
+                  >
+                    <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-gray-400 hover:text-gray-600 text-lg`}></i>
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me and Forgot Password */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                <div className="flex items-center">
+                  <input
+                    id="rememberMe"
+                    name="rememberMe"
+                    type="checkbox"
+                    checked={formData.rememberMe}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+                    Remember me
+                  </label>
+                </div>
+                <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                  Forgot password?
+                </Link>
+              </div>
+
+              {/* Sign In Button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-2.5 sm:py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing In...
+                  </div>
+                ) : (
+                  <>
+                    <i className="bx bx-log-in mr-2"></i>
+                    Sign In
+                  </>
+                )}
+              </button>
+
+              {/* Divider */}
+              <div className="flex items-center justify-center my-4 sm:my-6">
+                <div className="grow h-px bg-gray-200"></div>
+                <span className="px-4 text-gray-500 text-xs sm:text-sm uppercase font-medium">OR</span>
+                <div className="grow h-px bg-gray-200"></div>
+              </div>
+
+              {/* Google Sign In Button */}
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={togglePasswordVisibility}
+                className="w-full flex justify-center items-center py-2.5 sm:py-3 px-4 border border-gray-300 rounded-lg bg-white text-sm sm:text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                <svg width="18" height="18" className="mr-2 sm:mr-3" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"
+                  />
                 </svg>
+                Continue with Google
+              </button>
+            </form>
+
+            {/* Sign Up Link */}
+            <div className="mt-6 sm:mt-8 text-center">
+              <p className="text-sm sm:text-base text-gray-600">
+                New to Nosha?{' '}
+                <Link to="/signup" className="text-blue-600 hover:text-blue-800 font-medium">
+                  Create an account
+                </Link>
+              </p>
+            </div>
+            
+            {/* Demo Account Link */}
+            <div className="mt-4 text-center">
+              <button 
+                type="button" 
+                onClick={handleDemoLogin}
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center justify-center mx-auto"
+              >
+                <i className="bx bx-test-tube mr-1"></i>
+                Try demo account (Password123)
               </button>
             </div>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="rememberMe"
-                name="rememberMe"
-                type="checkbox"
-                checked={formData.rememberMe}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
-                Remember me
-              </label>
-            </div>
-            <a href="#" className="text-sm text-blue-600 hover:underline">
-              Forgot password?
-            </a>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Signing In...
-              </div>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-
-          <div className="flex items-center justify-center mt-4 mb-4">
-            <div className="grow h-0.5 bg-gray-200"></div>
-            <span className="px-4 text-gray-500 text-sm uppercase">OR</span>
-            <div className="grow h-0.5 bg-gray-200"></div>
-          </div>
-
-          <button
-            type="button"
-            className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3"
-          >
-            <svg width="20" height="20" className="mr-2" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"
-              />
-            </svg>
-            Sign in with Google
-          </button>
-
-          <p className="text-center text-sm text-gray-600 mt-4">
-            New to Nosha? <Link to="/signup" className="text-blue-600 hover:underline">Create an account</Link>
-          </p>
-          
-          <div className="text-center mt-6">
-            <button 
-              type="button" 
-              onClick={handleDemoLogin}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Use demo account for testing (Password123)
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
+      
+      {/* Footer */}
+      <footer className="py-4 px-4 text-center">
+        <p className="text-xs sm:text-sm text-gray-500">
+          © 2024 Nosha. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 };

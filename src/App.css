@@ -42,3 +42,81 @@
 .read-the-docs {
     color: #888;
 }
+
+
+/* Additional styles for smooth sidebar animations */
+
+
+/* Prevent body scroll when mobile menu is open */
+
+.mobile-menu-open {
+    overflow: hidden;
+}
+
+
+/* Custom scrollbar for sidebar navigation */
+
+.sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 2px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+
+/* Ensure proper z-index stacking */
+
+.sidebar-container {
+    z-index: 40;
+}
+
+.sidebar-overlay {
+    z-index: 30;
+}
+
+.sidebar-toggle {
+    z-index: 50;
+}
+
+
+/* Smooth transitions for all interactive elements */
+
+.sidebar-link {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-link:hover {
+    transform: translateX(2px);
+}
+
+
+/* Focus styles for accessibility */
+
+.sidebar-link:focus {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+
+/* Active link indicator */
+
+.sidebar-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #60a5fa;
+    border-radius: 0 2px 2px 0;
+}
