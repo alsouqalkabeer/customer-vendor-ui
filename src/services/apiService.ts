@@ -87,8 +87,23 @@ const dashboardService = {
   }
 };
 
+const vendorSettingsService = {
+  getVendorSettings: (vendorId) => {
+    return apiCall(`/api/vendors/${vendorId}/settings`, 'GET');
+  },
+  
+  updateVendorSettings: (vendorId, categoryKey, settingsData) => {
+    return apiCall(`/api/vendors/${vendorId}/settings/${categoryKey}`, 'PUT', settingsData);
+  },
+  
+  getVendorSettingsByCategory: (vendorId, categoryKey) => {
+    return apiCall(`/api/vendors/${vendorId}/settings/${categoryKey}`, 'GET');
+  }
+};
+
 export {
   apiCall,
   authService,
-  dashboardService
+  dashboardService,
+  vendorSettingsService
 };
