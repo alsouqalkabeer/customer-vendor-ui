@@ -19,7 +19,7 @@ const Sidebar = () => {
 
   // Get the vendor data from localStorage
   const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-  const vendorName = userData?.name || 'Vendor';
+  const vendorName = userData?.name || userData?.firstName || 'Vendor';
   const lastSeen = userData?.lastSeen ? new Date(userData.lastSeen) : new Date();
 
   // Check if mobile on mount and resize
@@ -76,11 +76,9 @@ const Sidebar = () => {
       {/* Sidebar */}
       <div
         className={`
-          fixed top-0 left-0 h-full bg-blue-800 text-white flex flex-col z-40
-          transition-transform duration-300 ease-in-out
-          ${isMobile ? 'w-64' : 'w-64'}
-          ${isOpen || !isMobile ? 'translate-x-0' : '-translate-x-full'}
-          md:relative md:translate-x-0
+          bg-blue-800 text-white flex flex-col w-64 flex-shrink-0
+          ${isMobile ? 'fixed top-0 left-0 h-full z-40 transition-transform duration-300 ease-in-out' : ''}
+          ${isMobile && !isOpen ? '-translate-x-full' : 'translate-x-0'}
         `}
       >
         {/* Vendor info */}
@@ -140,9 +138,6 @@ const Sidebar = () => {
           </button>
         </div>
       </div>
-      
-      {/* Spacer for desktop to prevent content overlap */}
-      <div className="hidden md:block w-64 flex-shrink-0"></div>
     </>
   );
 };

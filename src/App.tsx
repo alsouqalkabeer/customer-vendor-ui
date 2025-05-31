@@ -20,16 +20,24 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <Header />
-      <div className="flex flex-grow">
+      
+      {/* Main Content Area */}
+      <div className="flex">
+        {/* Sidebar */}
         <Sidebar />
-        <div className="flex-grow flex flex-col">
-          <main className="flex-grow p-6">
+        
+        {/* Main Content */}
+        <main className="flex-1 min-w-0">
+          <div className="min-h-screen">
             {children}
-          </main>
+          </div>
+          
+          {/* Footer */}
           <Footer />
-        </div>
+        </main>
       </div>
     </div>
   );
